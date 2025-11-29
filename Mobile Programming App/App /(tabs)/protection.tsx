@@ -13,6 +13,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Dimensions, // Import Dimensions for advanced logic if needed, though utilities handle most
 } from 'react-native';
 import {
   colors,
@@ -26,6 +27,10 @@ import {
   verticalScale,
   verticalSpacing
 } from '../components/shared';
+
+// Get screen width for potential future use or better understanding
+const { width } = Dimensions.get('window');
+const isSmallScreen = width < 375; // Example threshold for small phones
 
 export default function ProtectionScreen() {
   const [aiMonitoring, setAiMonitoring] = useState(true);
@@ -59,7 +64,7 @@ export default function ProtectionScreen() {
           >
             <View style={styles.headerIconWrapper}>
               <LinearGradient colors={['#EF4444', '#EC4899']} style={styles.headerIcon}>
-                <Icon name="shield" size={28} color="#FFF" />
+                <Icon name="shield" size={moderateScale(28)} color="#FFF" />
               </LinearGradient>
               <View style={styles.headerBadge} />
             </View>
@@ -85,7 +90,11 @@ export default function ProtectionScreen() {
         </View>
       </LinearGradient>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* Main Protection Status */}
         <TouchableOpacity
           onPress={async () => {
@@ -104,7 +113,7 @@ export default function ProtectionScreen() {
                 <Text style={styles.protectionSubtitle}>Advanced AI security active</Text>
               </View>
               <View style={styles.protectionIcon}>
-                <Icon name="shield" size={36} color="#FFF" />
+                <Icon name="shield" size={moderateScale(36)} color="#FFF" />
               </View>
             </View>
             <View style={styles.protectionStats}>
@@ -170,102 +179,48 @@ export default function ProtectionScreen() {
             }}
             activeOpacity={0.8}
           >
-            <Icon name="activity" size={22} color={colors.primary.main} />
+            <Icon name="activity" size={moderateScale(22)} color={colors.primary.main} />
             <Text style={styles.cardTitle}>Real-time Protection</Text>
           </TouchableOpacity>
           <View style={styles.protectionList}>
-            <TouchableOpacity
-              onPress={async () => {
-                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                Alert.alert(
-                  'AI Monitoring',
-                  'Continuous threat analysis using machine learning algorithms'
-                );
-              }}
-              activeOpacity={0.8}
-            >
-              <LinearGradient colors={['#ECFDF5', '#D1FAE5']} style={styles.protectionItem}>
-                <View style={styles.protectionItemLeft}>
-                  <LinearGradient colors={['#10B981', '#059669']} style={styles.protectionItemIcon}>
-                    <Icon name="eye" size={22} color="#FFF" />
-                  </LinearGradient>
-                  <View style={styles.protectionItemTextContainer}>
-                    <Text style={styles.protectionItemTitle}>AI Monitoring</Text>
-                    <Text style={styles.protectionItemSubtitle}>Continuous threat analysis</Text>
-                  </View>
-                </View>
-                <View style={styles.protectionItemRight}>
-                  <Switch
-                    value={aiMonitoring}
-                    onValueChange={() => handleToggle(setAiMonitoring, aiMonitoring, 'AI Monitoring')}
-                    trackColor={{ false: colors.neutral.gray300, true: colors.success.light }}
-                    thumbColor={aiMonitoring ? colors.success.main : colors.neutral.gray400}
-                  />
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
+            {/* AI Monitoring */}
+            <ProtectionItem
+              title="AI Monitoring"
+              subtitle="Continuous threat analysis"
+              iconName="eye"
+              colors={['#10B981', '#059669']}
+              itemColors={['#ECFDF5', '#D1FAE5']}
+              value={aiMonitoring}
+              onToggle={() => handleToggle(setAiMonitoring, aiMonitoring, 'AI Monitoring')}
+              trackColor={colors.success.light}
+              thumbColor={colors.success.main}
+            />
 
-            <TouchableOpacity
-              onPress={async () => {
-                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                Alert.alert(
-                  'Zero Trust Engine',
-                  'Never trust, always verify - validates every request'
-                );
-              }}
-              activeOpacity={0.8}
-            >
-              <LinearGradient colors={['#EFF6FF', '#DBEAFE']} style={styles.protectionItem}>
-                <View style={styles.protectionItemLeft}>
-                  <LinearGradient colors={['#3B82F6', '#2563EB']} style={styles.protectionItemIcon}>
-                    <Icon name="lock" size={22} color="#FFF" />
-                  </LinearGradient>
-                  <View style={styles.protectionItemTextContainer}>
-                    <Text style={styles.protectionItemTitle}>Zero Trust Engine</Text>
-                    <Text style={styles.protectionItemSubtitle}>Never trust, always verify</Text>
-                  </View>
-                </View>
-                <View style={styles.protectionItemRight}>
-                  <Switch
-                    value={zeroTrustEngine}
-                    onValueChange={() => handleToggle(setZeroTrustEngine, zeroTrustEngine, 'Zero Trust Engine')}
-                    trackColor={{ false: colors.neutral.gray300, true: colors.primary.light }}
-                    thumbColor={zeroTrustEngine ? colors.primary.main : colors.neutral.gray400}
-                  />
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
+            {/* Zero Trust Engine */}
+            <ProtectionItem
+              title="Zero Trust Engine"
+              subtitle="Never trust, always verify"
+              iconName="lock"
+              colors={['#3B82F6', '#2563EB']}
+              itemColors={['#EFF6FF', '#DBEAFE']}
+              value={zeroTrustEngine}
+              onToggle={() => handleToggle(setZeroTrustEngine, zeroTrustEngine, 'Zero Trust Engine')}
+              trackColor={colors.primary.light}
+              thumbColor={colors.primary.main}
+            />
 
-            <TouchableOpacity
-              onPress={async () => {
-                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                Alert.alert(
-                  'Network Analysis',
-                  'Deep packet inspection for network-level threats'
-                );
-              }}
-              activeOpacity={0.8}
-            >
-              <LinearGradient colors={['#FAF5FF', '#F3E8FF']} style={styles.protectionItem}>
-                <View style={styles.protectionItemLeft}>
-                  <LinearGradient colors={['#A855F7', '#9333EA']} style={styles.protectionItemIcon}>
-                    <Icon name="wifi" size={22} color="#FFF" />
-                  </LinearGradient>
-                  <View style={styles.protectionItemTextContainer}>
-                    <Text style={styles.protectionItemTitle}>Network Analysis</Text>
-                    <Text style={styles.protectionItemSubtitle}>Deep packet inspection</Text>
-                  </View>
-                </View>
-                <View style={styles.protectionItemRight}>
-                  <Switch
-                    value={networkAnalysis}
-                    onValueChange={() => handleToggle(setNetworkAnalysis, networkAnalysis, 'Network Analysis')}
-                    trackColor={{ false: colors.neutral.gray300, true: '#DDD6FE' }}
-                    thumbColor={networkAnalysis ? '#A855F7' : colors.neutral.gray400}
-                  />
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
+            {/* Network Analysis */}
+            <ProtectionItem
+              title="Network Analysis"
+              subtitle="Deep packet inspection"
+              iconName="wifi"
+              colors={['#A855F7', '#9333EA']}
+              itemColors={['#FAF5FF', '#F3E8FF']}
+              value={networkAnalysis}
+              onToggle={() => handleToggle(setNetworkAnalysis, networkAnalysis, 'Network Analysis')}
+              trackColor={'#DDD6FE'}
+              thumbColor={'#A855F7'}
+            />
           </View>
         </View>
 
@@ -279,7 +234,7 @@ export default function ProtectionScreen() {
           activeOpacity={0.9}
         >
           <View style={styles.threatIntelHeader}>
-            <Icon name="alert" size={22} color="#F87171" />
+            <Icon name="alert" size={moderateScale(22)} color="#F87171" />
             <Text style={styles.threatIntelTitle}>Threat Intelligence</Text>
           </View>
           {phishingPatterns.slice(0, 4).map((pattern, index) => (
@@ -293,7 +248,7 @@ export default function ProtectionScreen() {
               activeOpacity={0.7}
             >
               <View style={styles.threatPatternIcon}>
-                <Icon name="alert" size={14} color="#F87171" />
+                <Icon name="alert" size={moderateScale(14)} color="#F87171" />
               </View>
               <Text style={styles.threatPatternText} numberOfLines={1}>"{pattern}"</Text>
               <View style={styles.threatPatternBadge}>
@@ -313,7 +268,7 @@ export default function ProtectionScreen() {
             activeOpacity={0.8}
           >
             <View style={styles.threatNetworkHeader}>
-              <Icon name="users" size={18} color="#FB923C" />
+              <Icon name="users" size={moderateScale(18)} color="#FB923C" />
               <Text style={styles.threatNetworkTitle}>Global Threat Network</Text>
             </View>
             <Text style={styles.threatNetworkText}>
@@ -332,72 +287,39 @@ export default function ProtectionScreen() {
             }}
             activeOpacity={0.8}
           >
-            <Icon name="zap" size={22} color={colors.warning.main} />
+            <Icon name="zap" size={moderateScale(22)} color={colors.warning.main} />
             <Text style={styles.cardTitle}>Security Tips</Text>
           </TouchableOpacity>
           <View style={styles.tipsList}>
-            <TouchableOpacity
-              onPress={async () => {
-                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                Alert.alert(
-                  'Verify Before Clicking',
-                  'Always hover over links to preview the destination URL before clicking. Look for suspicious domains or misspellings.'
-                );
-              }}
-              activeOpacity={0.8}
-            >
-              <LinearGradient colors={['#ECFDF5', '#D1FAE5']} style={styles.tipItem}>
-                <View style={styles.tipIcon}>
-                  <Icon name="check" size={18} color="#FFF" />
-                </View>
-                <View style={styles.tipContent}>
-                  <Text style={styles.tipTitle}>Verify Before Clicking</Text>
-                  <Text style={styles.tipText}>Always hover over links to preview the destination URL before clicking.</Text>
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
+            {/* Tip 1 */}
+            <TipItem
+              title="Verify Before Clicking"
+              text="Always hover over links to preview the destination URL before clicking."
+              iconName="check"
+              iconBgColor={colors.success.main}
+              itemColors={['#ECFDF5', '#D1FAE5']}
+              alertBody="Always hover over links to preview the destination URL before clicking. Look for suspicious domains or misspellings."
+            />
 
-            <TouchableOpacity
-              onPress={async () => {
-                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                Alert.alert(
-                  'Check for HTTPS',
-                  'Legitimate sites use secure connections. Look for the lock icon in your browser address bar.'
-                );
-              }}
-              activeOpacity={0.8}
-            >
-              <LinearGradient colors={['#EFF6FF', '#DBEAFE']} style={styles.tipItem}>
-                <View style={[styles.tipIcon, { backgroundColor: colors.primary.main }]}>
-                  <Icon name="lock" size={18} color="#FFF" />
-                </View>
-                <View style={styles.tipContent}>
-                  <Text style={styles.tipTitle}>Check for HTTPS</Text>
-                  <Text style={styles.tipText}>Legitimate sites use secure connections. Look for the lock icon in your browser.</Text>
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
+            {/* Tip 2 */}
+            <TipItem
+              title="Check for HTTPS"
+              text="Legitimate sites use secure connections. Look for the lock icon in your browser."
+              iconName="lock"
+              iconBgColor={colors.primary.main}
+              itemColors={['#EFF6FF', '#DBEAFE']}
+              alertBody="Legitimate sites use secure connections. Look for the lock icon in your browser address bar."
+            />
 
-            <TouchableOpacity
-              onPress={async () => {
-                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                Alert.alert(
-                  'Suspicious Email Signs',
-                  'Watch for urgent language, spelling errors, generic greetings, and requests for personal information.'
-                );
-              }}
-              activeOpacity={0.8}
-            >
-              <LinearGradient colors={['#FAF5FF', '#F3E8FF']} style={styles.tipItem}>
-                <View style={[styles.tipIcon, { backgroundColor: '#A855F7' }]}>
-                  <Icon name="mail" size={18} color="#FFF" />
-                </View>
-                <View style={styles.tipContent}>
-                  <Text style={styles.tipTitle}>Suspicious Email Signs</Text>
-                  <Text style={styles.tipText}>Watch for urgent language, spelling errors, and requests for personal information.</Text>
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
+            {/* Tip 3 */}
+            <TipItem
+              title="Suspicious Email Signs"
+              text="Watch for urgent language, spelling errors, and requests for personal information."
+              iconName="mail"
+              iconBgColor={'#A855F7'}
+              itemColors={['#FAF5FF', '#F3E8FF']}
+              alertBody="Watch for urgent language, spelling errors, generic greetings, and requests for personal information."
+            />
           </View>
         </View>
 
@@ -406,6 +328,99 @@ export default function ProtectionScreen() {
     </SafeAreaView>
   );
 }
+
+// --- Reusable Components for Cleaner Code and Potential Responsiveness Logic ---
+
+interface ProtectionItemProps {
+  title: string;
+  subtitle: string;
+  iconName: string;
+  colors: string[];
+  itemColors: string[];
+  value: boolean;
+  onToggle: () => void;
+  trackColor: string;
+  thumbColor: string;
+}
+
+const ProtectionItem: React.FC<ProtectionItemProps> = ({
+  title,
+  subtitle,
+  iconName,
+  colors,
+  itemColors,
+  value,
+  onToggle,
+  trackColor,
+  thumbColor,
+}) => (
+  <TouchableOpacity
+    onPress={async () => {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      Alert.alert(title, subtitle);
+    }}
+    activeOpacity={0.8}
+  >
+    <LinearGradient colors={itemColors} style={styles.protectionItem}>
+      <View style={styles.protectionItemLeft}>
+        <LinearGradient colors={colors} style={styles.protectionItemIcon}>
+          <Icon name={iconName} size={moderateScale(22)} color="#FFF" />
+        </LinearGradient>
+        <View style={styles.protectionItemTextContainer}>
+          <Text style={styles.protectionItemTitle}>{title}</Text>
+          <Text style={styles.protectionItemSubtitle}>{subtitle}</Text>
+        </View>
+      </View>
+      <View style={styles.protectionItemRight}>
+        <Switch
+          value={value}
+          onValueChange={onToggle}
+          trackColor={{ false: colors.neutral.gray300, true: trackColor }}
+          thumbColor={value ? thumbColor : colors.neutral.gray400}
+        />
+      </View>
+    </LinearGradient>
+  </TouchableOpacity>
+);
+
+interface TipItemProps {
+  title: string;
+  text: string;
+  iconName: string;
+  iconBgColor: string;
+  itemColors: string[];
+  alertBody: string;
+}
+
+const TipItem: React.FC<TipItemProps> = ({
+  title,
+  text,
+  iconName,
+  iconBgColor,
+  itemColors,
+  alertBody,
+}) => (
+  <TouchableOpacity
+    onPress={async () => {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      Alert.alert(title, alertBody);
+    }}
+    activeOpacity={0.8}
+  >
+    <LinearGradient colors={itemColors} style={styles.tipItem}>
+      <View style={[styles.tipIcon, { backgroundColor: iconBgColor }]}>
+        <Icon name={iconName} size={moderateScale(18)} color="#FFF" />
+      </View>
+      <View style={styles.tipContent}>
+        <Text style={styles.tipTitle}>{title}</Text>
+        <Text style={styles.tipText} numberOfLines={2}>{text}</Text>
+      </View>
+    </LinearGradient>
+  </TouchableOpacity>
+);
+
+
+// --- Stylesheet ---
 
 const styles = StyleSheet.create({
   container: {
@@ -422,10 +437,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    // Ensures content wraps if necessary on extremely narrow screens, though unlikely here
+    // flexWrap: 'wrap', 
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    // Allows left side to shrink/grow slightly
+    flexShrink: 1, 
+    marginRight: spacing.md,
   },
   headerIconWrapper: {
     position: 'relative',
@@ -450,6 +470,8 @@ const styles = StyleSheet.create({
   },
   headerText: {
     marginLeft: spacing.md,
+    // Ensures text can take space and titles/subtitles don't get cut off immediately
+    flexShrink: 1, 
   },
   headerTitle: {
     fontSize: normalize(18),
@@ -462,6 +484,8 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     alignItems: 'flex-end',
+    // Ensures the time/status is not squeezed by the left content
+    flexShrink: 0,
   },
   headerStatus: {
     flexDirection: 'row',
@@ -486,9 +510,11 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    // Use paddingHorizontal for horizontal spacing and let flex: 1 handle vertical
   },
   scrollContent: {
+    paddingTop: spacing.lg,
     paddingBottom: Platform.OS === 'ios' ? verticalScale(120) : verticalScale(100),
   },
   protectionHeader: {
@@ -504,7 +530,7 @@ const styles = StyleSheet.create({
     marginBottom: verticalSpacing.lg,
   },
   protectionTextContainer: {
-    flex: 1,
+    flex: 1, // Allows text container to take up remaining space
     marginRight: spacing.md,
   },
   protectionTitle: {
@@ -525,13 +551,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0, // Ensure the icon doesn't shrink
   },
   protectionStats: {
     flexDirection: 'row',
     gap: spacing.md,
+    // Ensures stats columns remain side-by-side but allows for flexible sizing
+    flexWrap: 'wrap', 
   },
   protectionStatsColumn: {
-    flex: 1,
+    flex: 1, // Allows columns to take equal space
+    minWidth: moderateScale(140), // Optional: ensure minimum width on small screens before layout breaks
     gap: verticalScale(10),
   },
   protectionStatCard: {
@@ -541,6 +571,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minHeight: verticalScale(70),
     justifyContent: 'center',
+    flex: 1, // Ensures stat cards fill their column space vertically
   },
   protectionStatValue: {
     fontSize: normalize(22),
@@ -586,7 +617,7 @@ const styles = StyleSheet.create({
   protectionItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    flex: 1, // Allows the text/icon area to take available space
   },
   protectionItemIcon: {
     width: moderateScale(42),
@@ -595,9 +626,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
+    flexShrink: 0,
   },
   protectionItemTextContainer: {
-    flex: 1,
+    flex: 1, // Crucial: allows text to wrap if necessary
   },
   protectionItemTitle: {
     fontSize: normalize(14),
@@ -611,6 +643,7 @@ const styles = StyleSheet.create({
   },
   protectionItemRight: {
     marginLeft: spacing.md,
+    flexShrink: 0,
   },
   threatIntelCard: {
     backgroundColor: colors.neutral.gray800,
@@ -661,11 +694,7 @@ const styles = StyleSheet.create({
     paddingVertical: verticalScale(4),
     borderRadius: moderateScale(6),
     flexShrink: 0,
-  },
-  threatPatternBadgeText: {
-    fontSize: normalize(9),
-    fontWeight: '600',
-    color: '#FCA5A5',
+    marginLeft: spacing.sm,
   },
   threatNetwork: {
     backgroundColor: 'rgba(251,146,60,0.1)',
@@ -710,7 +739,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   tipContent: {
-    flex: 1,
+    flex: 1, // Crucial: allows text to wrap if necessary
   },
   tipTitle: {
     fontSize: normalize(14),
