@@ -1,8 +1,9 @@
-// app/(tabs)/protection.tsx - COMPLETE INTERACTIVE PROTECTION SCREEN WITH LOGOUT
+// app/(tabs)/protection.tsx - FIXED VERSION WITH PROPER LOGOUT
+import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Platform,
@@ -15,11 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useAuth } from '../../contexts/AuthContext';
-import CustomModal from '../components/CustomModal';
 import {
-  colors,
-  Icon,
   moderateScale,
   normalize,
   phishingPatterns,
@@ -28,22 +25,46 @@ import {
   spacing,
   verticalScale,
   verticalSpacing
-} from '../components/shared';
+} from '../../components/shared';
+import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
+
+const CustomIcon = ({ name, size, color }: { name: string, size: number, color: string }) => {
+  let iconName: keyof typeof Ionicons.glyphMap = 'shield-half-sharp';
+  
+  switch (name) {
+    case 'shield': iconName = 'shield-half-sharp'; break;
+    case 'cross': iconName = 'close-sharp'; break;
+    case 'activity': iconName = 'pulse-sharp'; break;
+    case 'eye': iconName = 'eye-sharp'; break;
+    case 'lock': iconName = 'lock-closed-sharp'; break;
+    case 'wifi': iconName = 'wifi-sharp'; break;
+    case 'alert': iconName = 'alert-circle-sharp'; break;
+    case 'users': iconName = 'people-sharp'; break;
+    case 'zap': iconName = 'flash-sharp'; break;
+    case 'check': iconName = 'checkmark-circle-sharp'; break;
+    case 'mail': iconName = 'mail-sharp'; break;
+    default: iconName = 'alert-circle-sharp';
+  }
+
+  return <Ionicons name={iconName} size={size} color={color} />;
+};
 
 export default function ProtectionScreen() {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
+  const { colors, isDark, toggleTheme } = useTheme();
   const [aiMonitoring, setAiMonitoring] = useState(true);
   const [zeroTrustEngine, setZeroTrustEngine] = useState(true);
   const [networkAnalysis, setNetworkAnalysis] = useState(true);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [modalData, setModalData] = useState({
-    title: '',
-    content: '',
-    icon: '',
-    gradientColors: ['#7C3AED', '#EC4899'],
-    data: null as any,
-  });
+
+  // Check authentication status
+  useEffect(() => {
+    if (!isAuthenticated) {
+      console.log('🔒 Not authenticated, redirecting to login...');
+      router.replace('/login');
+    }
+  }, [isAuthenticated]);
 
   const handleToggle = async (setter: React.Dispatch<React.SetStateAction<boolean>>, current: boolean, name: string) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -55,97 +76,103 @@ export default function ProtectionScreen() {
     );
   };
 
-  const openModal = (title: string, content: string, icon?: string, gradientColors?: string[], data?: any) => {
-    setModalData({
-      title,
-      content,
-      icon: icon || '',
-      gradientColors: gradientColors || ['#7C3AED', '#EC4899'],
-      data: data || null
-    });
-    setModalVisible(true);
+  const handleLogout = async () => {
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      console.log('🚪 Starting logout process...');
+      
+      // Call logout from auth context
+      await logout();
+      
+      console.log('✅ Logout successful');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      
+      // Navigate to login screen
+      console.log('🔄 Redirecting to login...');
+      router.replace('/login');
+      
+    } catch (error) {
+      console.error('❌ Logout error:', error);
+      Alert.alert('Error', 'Failed to logout. Please try again.');
+    }
   };
 
-  const handleLogout = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await logout();
-              await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              router.replace('/login');
-            } catch (error) {
-              Alert.alert('Error', 'Failed to logout. Please try again.');
-            }
-          }
-        }
-      ]
-    );
-  };
+  // Show loading if not authenticated
+  if (!isAuthenticated || !user) {
+    return null; // Will redirect via useEffect
+  }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
       
       {/* Header */}
-      <LinearGradient colors={['#0F172A', '#1E293B', '#0F172A']} style={styles.header}>
+      <LinearGradient colors={[colors.gradientStart, colors.gradientMiddle, colors.gradientEnd]} style={styles.header}>
         <View style={styles.headerContent}>
-          <TouchableOpacity
+          <TouchableOpacity 
             style={styles.headerLeft}
             onPress={async () => {
               await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              openModal('ZeroTrust IoT', 'Advanced Protection System', 'shield', ['#EF4444', '#EC4899']);
+              Alert.alert('ZeroTrust IoT', `Logged in as: ${user?.username || 'User'}`);
             }}
             activeOpacity={0.7}
           >
             <View style={styles.headerIconWrapper}>
               <LinearGradient colors={['#EF4444', '#EC4899']} style={styles.headerIcon}>
-                <Icon name="shield" size={28} color="#FFF" />
+                <CustomIcon name="shield" size={28} color="#FFF" />
               </LinearGradient>
-              <View style={styles.headerBadge} />
+              <View style={[styles.headerBadge, { backgroundColor: colors.success }]} />
             </View>
             <View style={styles.headerText}>
               <Text style={styles.headerTitle}>ZeroTrust IoT</Text>
-              <Text style={styles.headerSubtitle}>AI Security Platform</Text>
+              <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>AI Security Platform</Text>
             </View>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.headerRight}
-            onPress={async () => {
-              await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              openModal('Protected Status', 'All security layers active', 'shield', ['#059669', '#0D9488', '#06B6D4']);
-            }}
-            activeOpacity={0.7}
-          >
-            <View style={styles.headerStatus}>
-              <View style={styles.headerStatusDot} />
-              <Text style={styles.headerStatusText}>PROTECTED</Text>
-            </View>
-            <Text style={styles.headerTime}>{new Date().toLocaleTimeString()}</Text>
-          </TouchableOpacity>
+          <View style={styles.headerRight}>
+            <TouchableOpacity 
+              onPress={toggleTheme}
+              style={styles.themeToggle}
+              activeOpacity={0.7}
+            >
+              <Text style={{ fontSize: 20 }}>{isDark ? "🌙" : "☀️"}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={async () => {
+                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                Alert.alert('Protected Status', 'All security layers active');
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={styles.headerStatus}>
+                <View style={[styles.headerStatusDot, { backgroundColor: colors.success }]} />
+                <Text style={styles.headerStatusText}>PROTECTED</Text>
+              </View>
+              <Text style={[styles.headerTime, { color: colors.textTertiary }]}>{user?.username || 'User'}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </LinearGradient>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* User Info & Logout Section */}
         {user && (
-          <TouchableOpacity
-            style={styles.userCard}
-            onPress={async () => {
-              await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              openModal('Account Information', `Name: ${user.first_name} ${user.last_name}\nEmail: ${user.email}\nUsername: ${user.username}`, 'user', ['#7C3AED', '#EC4899']);
-            }}
-            activeOpacity={0.9}
-          >
+          <View style={styles.userCard}>
             <LinearGradient colors={['#7C3AED', '#EC4899']} style={styles.userCardGradient}>
-              <View style={styles.userCardContent}>
+              <TouchableOpacity
+                style={styles.userCardContent}
+                onPress={async () => {
+                  await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  Alert.alert(
+                    'Account Information',
+                    `Name: ${user.first_name} ${user.last_name}\nEmail: ${user.email}\nUsername: ${user.username}`
+                  );
+                }}
+                activeOpacity={0.9}
+              >
                 <View style={styles.userAvatar}>
                   <Text style={styles.userAvatarText}>
                     {user.first_name?.charAt(0) || user.username?.charAt(0) || 'U'}
@@ -157,24 +184,31 @@ export default function ProtectionScreen() {
                   </Text>
                   <Text style={styles.userEmail}>{user.email}</Text>
                 </View>
-              </View>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.logoutButton}
-                onPress={handleLogout}
-                activeOpacity={0.8}
+                onPress={async (e) => {
+                  // Stop event propagation
+                  e?.stopPropagation?.();
+                  await handleLogout();
+                }}
+                activeOpacity={0.7}
               >
-                <Icon name="cross" size={18} color="#FFF" />
+                <CustomIcon name="cross" size={18} color="#FFF" /> 
                 <Text style={styles.logoutButtonText}>Logout</Text>
               </TouchableOpacity>
             </LinearGradient>
-          </TouchableOpacity>
+          </View>
         )}
 
         {/* Main Protection Status */}
         <TouchableOpacity
           onPress={async () => {
             await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-            openModal('Protection Status', `All systems operational\n\nThreats Blocked: ${phishingStats.threatsBlocked}\nEmails Scanned: ${phishingStats.emailsScanned}\nURLs Checked: ${phishingStats.urlsChecked}\nSuccess Rate: ${phishingStats.successRate}%`, 'shield', ['#059669', '#0D9488', '#06B6D4']);
+            Alert.alert(
+              'Protection Status',
+              `All systems operational\n\nThreats Blocked: ${phishingStats.threatsBlocked}\nEmails Scanned: ${phishingStats.emailsScanned}\nURLs Checked: ${phishingStats.urlsChecked}\nSuccess Rate: ${phishingStats.successRate}%`
+            );
           }}
           activeOpacity={0.9}
         >
@@ -185,27 +219,27 @@ export default function ProtectionScreen() {
                 <Text style={styles.protectionSubtitle}>Advanced AI security active</Text>
               </View>
               <View style={styles.protectionIcon}>
-                <Icon name="shield" size={36} color="#FFF" />
+                <CustomIcon name="shield" size={36} color="#FFF" />
               </View>
             </View>
             <View style={styles.protectionStats}>
               <View style={styles.protectionStatsColumn}>
-                <TouchableOpacity
+                <TouchableOpacity 
                   style={styles.protectionStatCard}
                   onPress={async () => {
                     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    openModal('Threats Blocked', `${phishingStats.threatsBlocked} malicious items detected and blocked`, 'shield', ['#EF4444', '#EC4899']);
+                    Alert.alert('Threats Blocked', `${phishingStats.threatsBlocked} malicious items detected and blocked`);
                   }}
                   activeOpacity={0.8}
                 >
                   <Text style={styles.protectionStatValue}>{phishingStats.threatsBlocked}</Text>
                   <Text style={styles.protectionStatLabel}>Threats Blocked Today</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
+                <TouchableOpacity 
                   style={styles.protectionStatCard}
                   onPress={async () => {
                     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    openModal('Emails Scanned', `${phishingStats.emailsScanned} emails analyzed for threats`, 'mail', ['#3B82F6', '#2563EB']);
+                    Alert.alert('Emails Scanned', `${phishingStats.emailsScanned} emails analyzed for threats`);
                   }}
                   activeOpacity={0.8}
                 >
@@ -214,22 +248,22 @@ export default function ProtectionScreen() {
                 </TouchableOpacity>
               </View>
               <View style={styles.protectionStatsColumn}>
-                <TouchableOpacity
+                <TouchableOpacity 
                   style={styles.protectionStatCard}
                   onPress={async () => {
                     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    openModal('URLs Checked', `${phishingStats.urlsChecked} URLs verified for security`, 'link', ['#10B981', '#059669']);
+                    Alert.alert('URLs Checked', `${phishingStats.urlsChecked} URLs verified for security`);
                   }}
                   activeOpacity={0.8}
                 >
                   <Text style={styles.protectionStatValue}>{phishingStats.urlsChecked}</Text>
                   <Text style={styles.protectionStatLabel}>URLs Verified</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
+                <TouchableOpacity 
                   style={styles.protectionStatCard}
                   onPress={async () => {
                     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    openModal('Detection Rate', `${phishingStats.successRate}% accurate threat detection`, 'target', ['#06B6D4', '#0891B2']);
+                    Alert.alert('Detection Rate', `${phishingStats.successRate}% accurate threat detection`);
                   }}
                   activeOpacity={0.8}
                 >
@@ -242,98 +276,119 @@ export default function ProtectionScreen() {
         </TouchableOpacity>
 
         {/* Real-time Status */}
-        <View style={styles.card}>
-          <TouchableOpacity
+        <View style={[styles.card, { backgroundColor: isDark ? colors.surface : colors.cardBackground }]}>
+          <TouchableOpacity 
             style={styles.cardHeader}
             onPress={async () => {
               await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              openModal('Real-time Protection', 'All protection layers are active and monitoring', 'activity', ['#3B82F6', '#2563EB']);
+              Alert.alert('Real-time Protection', 'All protection layers are active and monitoring');
             }}
             activeOpacity={0.8}
           >
-            <Icon name="activity" size={22} color={colors.primary.main} />
-            <Text style={styles.cardTitle}>Real-time Protection</Text>
+            <CustomIcon name="activity" size={22} color={colors.primary} />
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Real-time Protection</Text>
           </TouchableOpacity>
           <View style={styles.protectionList}>
+            {/* AI Monitoring */}
             <TouchableOpacity
               onPress={async () => {
                 await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                openModal('AI Monitoring', 'Continuous threat analysis using machine learning algorithms', 'eye', ['#10B981', '#059669']);
+                Alert.alert(
+                  'AI Monitoring',
+                  'Continuous threat analysis using machine learning algorithms'
+                );
               }}
               activeOpacity={0.8}
             >
-              <LinearGradient colors={['#ECFDF5', '#D1FAE5']} style={styles.protectionItem}>
+              <LinearGradient 
+                colors={isDark ? ['rgba(16,185,129,0.15)', 'rgba(5,150,105,0.15)'] : ['#ECFDF5', '#D1FAE5']} 
+                style={styles.protectionItem}
+              >
                 <View style={styles.protectionItemLeft}>
                   <LinearGradient colors={['#10B981', '#059669']} style={styles.protectionItemIcon}>
-                    <Icon name="eye" size={22} color="#FFF" />
+                    <CustomIcon name="eye" size={22} color="#FFF" />
                   </LinearGradient>
                   <View style={styles.protectionItemTextContainer}>
-                    <Text style={styles.protectionItemTitle}>AI Monitoring</Text>
-                    <Text style={styles.protectionItemSubtitle}>Continuous threat analysis</Text>
+                    <Text style={[styles.protectionItemTitle, { color: colors.text }]}>AI Monitoring</Text>
+                    <Text style={[styles.protectionItemSubtitle, { color: colors.textSecondary }]}>Continuous threat analysis</Text>
                   </View>
                 </View>
                 <View style={styles.protectionItemRight}>
                   <Switch
                     value={aiMonitoring}
                     onValueChange={() => handleToggle(setAiMonitoring, aiMonitoring, 'AI Monitoring')}
-                    trackColor={{ false: colors.neutral.gray300, true: colors.success.light }}
-                    thumbColor={aiMonitoring ? colors.success.main : colors.neutral.gray400}
+                    trackColor={{ false: colors.border, true: colors.successLight }}
+                    thumbColor={aiMonitoring ? colors.success : colors.textTertiary}
                   />
                 </View>
               </LinearGradient>
             </TouchableOpacity>
 
+            {/* Zero Trust Engine */}
             <TouchableOpacity
               onPress={async () => {
                 await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                openModal('Zero Trust Engine', 'Never trust, always verify - validates every request', 'lock', ['#3B82F6', '#2563EB']);
+                Alert.alert(
+                  'Zero Trust Engine',
+                  'Never trust, always verify - validates every request'
+                );
               }}
               activeOpacity={0.8}
             >
-              <LinearGradient colors={['#EFF6FF', '#DBEAFE']} style={styles.protectionItem}>
+              <LinearGradient 
+                colors={isDark ? ['rgba(59,130,246,0.15)', 'rgba(37,99,235,0.15)'] : ['#EFF6FF', '#DBEAFE']} 
+                style={styles.protectionItem}
+              >
                 <View style={styles.protectionItemLeft}>
                   <LinearGradient colors={['#3B82F6', '#2563EB']} style={styles.protectionItemIcon}>
-                    <Icon name="lock" size={22} color="#FFF" />
+                    <CustomIcon name="lock" size={22} color="#FFF" />
                   </LinearGradient>
                   <View style={styles.protectionItemTextContainer}>
-                    <Text style={styles.protectionItemTitle}>Zero Trust Engine</Text>
-                    <Text style={styles.protectionItemSubtitle}>Never trust, always verify</Text>
+                    <Text style={[styles.protectionItemTitle, { color: colors.text }]}>Zero Trust Engine</Text>
+                    <Text style={[styles.protectionItemSubtitle, { color: colors.textSecondary }]}>Never trust, always verify</Text>
                   </View>
                 </View>
                 <View style={styles.protectionItemRight}>
                   <Switch
                     value={zeroTrustEngine}
                     onValueChange={() => handleToggle(setZeroTrustEngine, zeroTrustEngine, 'Zero Trust Engine')}
-                    trackColor={{ false: colors.neutral.gray300, true: colors.primary.light }}
-                    thumbColor={zeroTrustEngine ? colors.primary.main : colors.neutral.gray400}
+                    trackColor={{ false: colors.border, true: colors.primaryLight }}
+                    thumbColor={zeroTrustEngine ? colors.primary : colors.textTertiary}
                   />
                 </View>
               </LinearGradient>
             </TouchableOpacity>
 
+            {/* Network Analysis */}
             <TouchableOpacity
               onPress={async () => {
                 await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                openModal('Network Analysis', 'Deep packet inspection for network-level threats', 'wifi', ['#A855F7', '#9333EA']);
+                Alert.alert(
+                  'Network Analysis',
+                  'Deep packet inspection for network-level threats'
+                );
               }}
               activeOpacity={0.8}
             >
-              <LinearGradient colors={['#FAF5FF', '#F3E8FF']} style={styles.protectionItem}>
+              <LinearGradient 
+                colors={isDark ? ['rgba(168,85,247,0.15)', 'rgba(147,51,234,0.15)'] : ['#FAF5FF', '#F3E8FF']} 
+                style={styles.protectionItem}
+              >
                 <View style={styles.protectionItemLeft}>
                   <LinearGradient colors={['#A855F7', '#9333EA']} style={styles.protectionItemIcon}>
-                    <Icon name="wifi" size={22} color="#FFF" />
+                    <CustomIcon name="wifi" size={22} color="#FFF" />
                   </LinearGradient>
                   <View style={styles.protectionItemTextContainer}>
-                    <Text style={styles.protectionItemTitle}>Network Analysis</Text>
-                    <Text style={styles.protectionItemSubtitle}>Deep packet inspection</Text>
+                    <Text style={[styles.protectionItemTitle, { color: colors.text }]}>Network Analysis</Text>
+                    <Text style={[styles.protectionItemSubtitle, { color: colors.textSecondary }]}>Deep packet inspection</Text>
                   </View>
                 </View>
                 <View style={styles.protectionItemRight}>
                   <Switch
                     value={networkAnalysis}
                     onValueChange={() => handleToggle(setNetworkAnalysis, networkAnalysis, 'Network Analysis')}
-                    trackColor={{ false: colors.neutral.gray300, true: '#DDD6FE' }}
-                    thumbColor={networkAnalysis ? '#A855F7' : colors.neutral.gray400}
+                    trackColor={{ false: colors.border, true: '#DDD6FE' }}
+                    thumbColor={networkAnalysis ? '#A855F7' : colors.textTertiary}
                   />
                 </View>
               </LinearGradient>
@@ -342,83 +397,92 @@ export default function ProtectionScreen() {
         </View>
 
         {/* Threat Intelligence */}
-        <TouchableOpacity
-          style={styles.threatIntelCard}
+        <TouchableOpacity 
+          style={[styles.threatIntelCard, { backgroundColor: isDark ? colors.surface : colors.surfaceElevated }]}
           onPress={async () => {
             await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            openModal('Threat Intelligence', 'Real-time threat patterns detected globally', 'alert', ['#EF4444', '#F87171']);
+            Alert.alert('Threat Intelligence', 'Real-time threat patterns detected globally');
           }}
           activeOpacity={0.9}
         >
           <View style={styles.threatIntelHeader}>
-            <Icon name="alert" size={22} color="#F87171" />
-            <Text style={styles.threatIntelTitle}>Threat Intelligence</Text>
+            <CustomIcon name="alert" size={22} color="#F87171" />
+            <Text style={[styles.threatIntelTitle, { color: colors.text }]}>Threat Intelligence</Text>
           </View>
           {phishingPatterns.slice(0, 4).map((pattern, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.threatPattern}
+            <TouchableOpacity 
+              key={index} 
+              style={[styles.threatPattern, { backgroundColor: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.1)' }]}
               onPress={async () => {
                 await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                openModal('Threat Pattern', `"${pattern}"\n\nThis phrase is commonly used in phishing attacks`, 'alert', ['#EF4444', '#F87171']);
+                Alert.alert('Threat Pattern', `"${pattern}"\n\nThis phrase is commonly used in phishing attacks`);
               }}
               activeOpacity={0.7}
             >
               <View style={styles.threatPatternIcon}>
-                <Icon name="alert" size={14} color="#F87171" />
+                <CustomIcon name="alert" size={14} color="#F87171" />
               </View>
-              <Text style={styles.threatPatternText} numberOfLines={1}>"{pattern}"</Text>
+              <Text style={[styles.threatPatternText, { color: isDark ? colors.textSecondary : colors.text }]} numberOfLines={1}>"{pattern}"</Text>
               <View style={styles.threatPatternBadge}>
                 <Text style={styles.threatPatternBadgeText}>HIGH RISK</Text>
               </View>
             </TouchableOpacity>
           ))}
-          <TouchableOpacity
-            style={styles.threatNetwork}
+          <TouchableOpacity 
+            style={[styles.threatNetwork, { backgroundColor: isDark ? 'rgba(251,146,60,0.1)' : 'rgba(251,146,60,0.1)' }]}
             onPress={async () => {
               await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              openModal('Global Threat Network', 'Connected to 50,000+ security nodes worldwide sharing real-time intelligence', 'users', ['#FB923C', '#F97316']);
+              Alert.alert(
+                'Global Threat Network',
+                'Connected to 50,000+ security nodes worldwide sharing real-time intelligence'
+              );
             }}
             activeOpacity={0.8}
           >
             <View style={styles.threatNetworkHeader}>
-              <Icon name="users" size={18} color="#FB923C" />
-              <Text style={styles.threatNetworkTitle}>Global Threat Network</Text>
+              <CustomIcon name="users" size={18} color="#FB923C" />
+              <Text style={[styles.threatNetworkTitle, { color: isDark ? '#FCD34D' : '#FB923C' }]}>Global Threat Network</Text>
             </View>
-            <Text style={styles.threatNetworkText}>
+            <Text style={[styles.threatNetworkText, { color: colors.textSecondary }]}>
               Connected to 50,000+ security nodes worldwide for real-time threat intelligence sharing.
             </Text>
           </TouchableOpacity>
         </TouchableOpacity>
 
         {/* Security Tips */}
-        <View style={styles.card}>
-          <TouchableOpacity
+        <View style={[styles.card, { backgroundColor: isDark ? '#1E293B' : colors.cardBackground }]}>
+          <TouchableOpacity 
             style={styles.cardHeader}
             onPress={async () => {
               await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              openModal('Security Tips', 'Best practices to stay protected online', 'zap', ['#F59E0B', '#D97706']);
+              Alert.alert('Security Tips', 'Best practices to stay protected online');
             }}
             activeOpacity={0.8}
           >
-            <Icon name="zap" size={22} color={colors.warning.main} />
-            <Text style={styles.cardTitle}>Security Tips</Text>
+            <CustomIcon name="zap" size={22} color={colors.warning} />
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Security Tips</Text>
           </TouchableOpacity>
           <View style={styles.tipsList}>
             <TouchableOpacity
               onPress={async () => {
                 await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                openModal('Verify Before Clicking', 'Always hover over links to preview the destination URL before clicking. Look for suspicious domains or misspellings.', 'check', ['#10B981', '#059669']);
+                Alert.alert(
+                  'Verify Before Clicking',
+                  'Always hover over links to preview the destination URL before clicking. Look for suspicious domains or misspellings.'
+                );
               }}
               activeOpacity={0.8}
             >
-              <LinearGradient colors={['#ECFDF5', '#D1FAE5']} style={styles.tipItem}>
-                <View style={styles.tipIcon}>
-                  <Icon name="check" size={18} color="#FFF" />
+              <LinearGradient 
+                colors={isDark ? ['rgba(16,185,129,0.15)', 'rgba(5,150,105,0.15)'] : ['#ECFDF5', '#D1FAE5']} 
+                style={styles.tipItem}
+              >
+                <View style={[styles.tipIcon, { backgroundColor: colors.success }]}>
+                  <CustomIcon name="check" size={18} color="#FFF" />
                 </View>
                 <View style={styles.tipContent}>
-                  <Text style={styles.tipTitle}>Verify Before Clicking</Text>
-                  <Text style={styles.tipText}>Always hover over links to preview the destination URL before clicking.</Text>
+                  <Text style={[styles.tipTitle, { color: colors.text }]}>Verify Before Clicking</Text>
+                  <Text style={[styles.tipText, { color: colors.textSecondary }]}>Always hover over links to preview the destination URL before clicking.</Text>
                 </View>
               </LinearGradient>
             </TouchableOpacity>
@@ -426,17 +490,23 @@ export default function ProtectionScreen() {
             <TouchableOpacity
               onPress={async () => {
                 await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                openModal('Check for HTTPS', 'Legitimate sites use secure connections. Look for the lock icon in your browser address bar.', 'lock', ['#3B82F6', '#2563EB']);
+                Alert.alert(
+                  'Check for HTTPS',
+                  'Legitimate sites use secure connections. Look for the lock icon in your browser address bar.'
+                );
               }}
               activeOpacity={0.8}
             >
-              <LinearGradient colors={['#EFF6FF', '#DBEAFE']} style={styles.tipItem}>
-                <View style={[styles.tipIcon, { backgroundColor: colors.primary.main }]}>
-                  <Icon name="lock" size={18} color="#FFF" />
+              <LinearGradient 
+                colors={isDark ? ['rgba(59,130,246,0.15)', 'rgba(37,99,235,0.15)'] : ['#EFF6FF', '#DBEAFE']} 
+                style={styles.tipItem}
+              >
+                <View style={[styles.tipIcon, { backgroundColor: colors.primary }]}>
+                  <CustomIcon name="lock" size={18} color="#FFF" />
                 </View>
                 <View style={styles.tipContent}>
-                  <Text style={styles.tipTitle}>Check for HTTPS</Text>
-                  <Text style={styles.tipText}>Legitimate sites use secure connections. Look for the lock icon in your browser.</Text>
+                  <Text style={[styles.tipTitle, { color: colors.text }]}>Check for HTTPS</Text>
+                  <Text style={[styles.tipText, { color: colors.textSecondary }]}>Legitimate sites use secure connections. Look for the lock icon in your browser.</Text>
                 </View>
               </LinearGradient>
             </TouchableOpacity>
@@ -444,17 +514,23 @@ export default function ProtectionScreen() {
             <TouchableOpacity
               onPress={async () => {
                 await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                openModal('Suspicious Email Signs', 'Watch for urgent language, spelling errors, generic greetings, and requests for personal information.', 'mail', ['#A855F7', '#9333EA']);
+                Alert.alert(
+                  'Suspicious Email Signs',
+                  'Watch for urgent language, spelling errors, generic greetings, and requests for personal information.'
+                );
               }}
               activeOpacity={0.8}
             >
-              <LinearGradient colors={['#FAF5FF', '#F3E8FF']} style={styles.tipItem}>
+              <LinearGradient 
+                colors={isDark ? ['rgba(168,85,247,0.15)', 'rgba(147,51,234,0.15)'] : ['#FAF5FF', '#F3E8FF']} 
+                style={styles.tipItem}
+              >
                 <View style={[styles.tipIcon, { backgroundColor: '#A855F7' }]}>
-                  <Icon name="mail" size={18} color="#FFF" />
+                  <CustomIcon name="mail" size={18} color="#FFF" />
                 </View>
                 <View style={styles.tipContent}>
-                  <Text style={styles.tipTitle}>Suspicious Email Signs</Text>
-                  <Text style={styles.tipText}>Watch for urgent language, spelling errors, and requests for personal information.</Text>
+                  <Text style={[styles.tipTitle, { color: colors.text }]}>Suspicious Email Signs</Text>
+                  <Text style={[styles.tipText, { color: colors.textSecondary }]}>Watch for urgent language, spelling errors, and requests for personal information.</Text>
                 </View>
               </LinearGradient>
             </TouchableOpacity>
@@ -470,7 +546,6 @@ export default function ProtectionScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.neutral.gray100,
   },
   header: {
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight! + verticalScale(5) : verticalScale(10),
@@ -482,10 +557,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    width: '100%',
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 1,
   },
   headerIconWrapper: {
     position: 'relative',
@@ -504,24 +581,34 @@ const styles = StyleSheet.create({
     width: moderateScale(14),
     height: moderateScale(14),
     borderRadius: moderateScale(7),
-    backgroundColor: colors.success.main,
     borderWidth: 2,
     borderColor: '#0F172A',
   },
   headerText: {
     marginLeft: spacing.md,
+    flexShrink: 1,
   },
   headerTitle: {
     fontSize: normalize(18),
     fontWeight: 'bold',
-    color: colors.neutral.white,
+    color: '#FFFFFF',
   },
   headerSubtitle: {
     fontSize: normalize(12),
-    color: colors.neutral.gray300,
   },
   headerRight: {
-    alignItems: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    flexShrink: 0,
+  },
+  themeToggle: {
+    width: moderateScale(36),
+    height: moderateScale(36),
+    borderRadius: moderateScale(18),
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerStatus: {
     flexDirection: 'row',
@@ -532,7 +619,6 @@ const styles = StyleSheet.create({
     width: moderateScale(7),
     height: moderateScale(7),
     borderRadius: moderateScale(3.5),
-    backgroundColor: colors.success.main,
     marginRight: spacing.xs,
   },
   headerStatusText: {
@@ -542,13 +628,13 @@ const styles = StyleSheet.create({
   },
   headerTime: {
     fontSize: normalize(9),
-    color: colors.neutral.gray400,
   },
   content: {
     flex: 1,
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
   },
   scrollContent: {
+    paddingTop: spacing.lg,
     paddingBottom: Platform.OS === 'ios' ? verticalScale(120) : verticalScale(100),
   },
   userCard: {
@@ -573,11 +659,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
+    flexShrink: 0,
   },
   userAvatarText: {
     fontSize: normalize(24),
     fontWeight: 'bold',
-    color: colors.neutral.white,
+    color: '#FFFFFF',
   },
   userInfo: {
     flex: 1,
@@ -585,7 +672,7 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: normalize(18),
     fontWeight: 'bold',
-    color: colors.neutral.white,
+    color: '#FFFFFF',
     marginBottom: 4,
   },
   userEmail: {
@@ -606,7 +693,7 @@ const styles = StyleSheet.create({
   logoutButtonText: {
     fontSize: normalize(15),
     fontWeight: '600',
-    color: colors.neutral.white,
+    color: '#FFFFFF',
     marginLeft: spacing.sm,
   },
   protectionHeader: {
@@ -628,7 +715,7 @@ const styles = StyleSheet.create({
   protectionTitle: {
     fontSize: normalize(20),
     fontWeight: 'bold',
-    color: colors.neutral.white,
+    color: '#FFFFFF',
     marginBottom: 6,
   },
   protectionSubtitle: {
@@ -643,6 +730,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   protectionStats: {
     flexDirection: 'row',
@@ -655,7 +743,7 @@ const styles = StyleSheet.create({
   protectionStatCard: {
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: moderateScale(14),
-    padding: spacing.md,
+    padding: spacing.sm,
     alignItems: 'center',
     minHeight: verticalScale(70),
     justifyContent: 'center',
@@ -663,7 +751,7 @@ const styles = StyleSheet.create({
   protectionStatValue: {
     fontSize: normalize(22),
     fontWeight: 'bold',
-    color: colors.neutral.white,
+    color: '#FFFFFF',
     marginBottom: 4,
   },
   protectionStatLabel: {
@@ -672,7 +760,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.9)',
     borderRadius: moderateScale(20),
     padding: spacing.lg,
     marginBottom: verticalSpacing.lg,
@@ -686,8 +773,8 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: normalize(16),
     fontWeight: 'bold',
-    color: colors.neutral.gray900,
     marginLeft: spacing.md,
+    flexShrink: 1,
   },
   protectionList: {
     gap: verticalScale(10),
@@ -713,6 +800,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
+    flexShrink: 0,
   },
   protectionItemTextContainer: {
     flex: 1,
@@ -720,18 +808,16 @@ const styles = StyleSheet.create({
   protectionItemTitle: {
     fontSize: normalize(14),
     fontWeight: '600',
-    color: colors.neutral.gray900,
     marginBottom: 2,
   },
   protectionItemSubtitle: {
     fontSize: normalize(11),
-    color: colors.neutral.gray500,
   },
   protectionItemRight: {
     marginLeft: spacing.md,
+    flexShrink: 0,
   },
   threatIntelCard: {
-    backgroundColor: colors.neutral.gray800,
     borderRadius: moderateScale(20),
     padding: spacing.lg,
     marginBottom: verticalSpacing.lg,
@@ -744,13 +830,11 @@ const styles = StyleSheet.create({
   threatIntelTitle: {
     fontSize: normalize(16),
     fontWeight: 'bold',
-    color: colors.neutral.white,
     marginLeft: spacing.md,
   },
   threatPattern: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: moderateScale(14),
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
@@ -770,7 +854,6 @@ const styles = StyleSheet.create({
   threatPatternText: {
     flex: 1,
     fontSize: normalize(12),
-    color: colors.neutral.gray200,
     lineHeight: normalize(16),
   },
   threatPatternBadge: {
@@ -779,6 +862,7 @@ const styles = StyleSheet.create({
     paddingVertical: verticalScale(4),
     borderRadius: moderateScale(6),
     flexShrink: 0,
+    marginLeft: spacing.sm,
   },
   threatPatternBadgeText: {
     fontSize: normalize(9),
@@ -786,7 +870,6 @@ const styles = StyleSheet.create({
     color: '#FCA5A5',
   },
   threatNetwork: {
-    backgroundColor: 'rgba(251,146,60,0.1)',
     borderRadius: moderateScale(14),
     borderWidth: 1,
     borderColor: 'rgba(251,146,60,0.2)',
@@ -801,12 +884,10 @@ const styles = StyleSheet.create({
   threatNetworkTitle: {
     fontSize: normalize(13),
     fontWeight: '600',
-    color: '#FB923C',
     marginLeft: spacing.sm,
   },
   threatNetworkText: {
     fontSize: normalize(12),
-    color: colors.neutral.gray300,
     lineHeight: normalize(17),
   },
   tipsList: {
@@ -821,7 +902,6 @@ const styles = StyleSheet.create({
     width: moderateScale(36),
     height: moderateScale(36),
     borderRadius: moderateScale(10),
-    backgroundColor: colors.success.main,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
@@ -833,12 +913,10 @@ const styles = StyleSheet.create({
   tipTitle: {
     fontSize: normalize(14),
     fontWeight: '600',
-    color: colors.neutral.gray900,
     marginBottom: 4,
   },
   tipText: {
     fontSize: normalize(12),
-    color: colors.neutral.gray500,
     lineHeight: normalize(17),
   },
 });
