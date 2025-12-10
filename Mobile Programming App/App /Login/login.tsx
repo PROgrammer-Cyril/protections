@@ -1,38 +1,102 @@
-// app/login.tsx
-import { Ionicons } from '@expo/vector-icons';
+// app/login.tsx - LOGIN SCREEN WITH REAL API INTEGRATION
 import { BlurView } from 'expo-blur';
+import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-    Dimensions,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
-
-const { width } = Dimensions.get('window');
+import {
+  colors,
+  Icon
+} from '../components/shared';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const { login, isAuthenticated } = useAuth();
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
   const [focusedInput, setFocusedInput] = useState('');
 
-  const handleSignIn = () => {
-    // Add your authentication logic here
-    // For now, just navigate to the tabs
-    router.replace('/(tabs)');
-  };
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace('/(tabs)');
+    }
+  }, [isAuthenticated]);
 
-  const handleBiometricLogin = () => {
-    // Add biometric authentication logic here
-    router.replace('/(tabs)');
+  const handleLogin = async () => {
+    if (!username || !password) {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      setError('Please enter ID number and password');
+      return;
+    }
+
+    setError('');
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsLoading(true);
+
+    try {
+      console.log('🔐 Attempting login...');
+      console.log('📋 ID Number:', username);
+      console.log('🌐 API: https://citc-ustpcdo.com/api/v1/');
+      
+      // Call the auth context login function with real API
+      await login(username, password);
+      
+      console.log('✅ Login successful!');
+      console.log('🎉 Authenticated! Redirecting to dashboard...');
+
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      
+      Alert.alert(
+        'Login Successful',
+        `Welcome back! You're now logged in.`,
+        [
+          {
+            text: 'Continue',
+            onPress: () => {
+              router.replace('/(tabs)');
+            },
+          },
+        ]
+      );
+
+    } catch (err) {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      
+      const errorMessage = err instanceof Error ? err.message : 'Login failed';
+      console.error('🚨 Login Error:', errorMessage);
+      
+      setError(errorMessage);
+      
+      // Show user-friendly error
+      let displayMessage = errorMessage;
+      if (errorMessage.includes('Invalid')) {
+        displayMessage = 'Invalid ID number or password. Please try again.';
+      } else if (errorMessage.includes('Network') || errorMessage.includes('timeout')) {
+        displayMessage = 'Cannot connect to server. Please check your internet connection.';
+      }
+      
+      Alert.alert('Login Failed', displayMessage, [{ text: 'Try Again' }]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -48,157 +112,196 @@ export default function LoginScreen() {
         <View style={[styles.circle, styles.circle1]} />
         <View style={[styles.circle, styles.circle2]} />
 
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardView}
         >
-          {/* Logo Section */}
-          <View style={styles.logoContainer}>
-            <LinearGradient
-              colors={['#ec4899', '#ef4444']}
-              style={styles.logoGradient}
-            >
-              <Ionicons name="shield-checkmark" size={32} color="white" />
-            </LinearGradient>
-            <Text style={styles.title}>ZeroTrust IoT</Text>
-            <Text style={styles.subtitle}>AI Security Platform</Text>
-          </View>
-
-          {/* Main Card */}
-          <BlurView intensity={80} tint="light" style={styles.card}>
-            <View style={styles.cardContent}>
-              <View style={styles.header}>
-                <Text style={styles.welcomeText}>Welcome Back</Text>
-                <Text style={styles.description}>
-                  Sign in to access your security dashboard
-                </Text>
-              </View>
-
-              {/* Email Input */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Email Address</Text>
-                <View
-                  style={[
-                    styles.inputWrapper,
-                    focusedInput === 'email' && styles.inputWrapperFocused,
-                  ]}
-                >
-                  <Ionicons
-                    name="mail-outline"
-                    size={18}
-                    color="#3b82f6"
-                    style={styles.inputIcon}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter your email"
-                    placeholderTextColor="#94a3b8"
-                    value={email}
-                    onChangeText={setEmail}
-                    onFocus={() => setFocusedInput('email')}
-                    onBlur={() => setFocusedInput('')}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                </View>
-              </View>
-
-              {/* Password Input */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Password</Text>
-                <View
-                  style={[
-                    styles.inputWrapper,
-                    focusedInput === 'password' && styles.inputWrapperFocused,
-                  ]}
-                >
-                  <Ionicons
-                    name="lock-closed-outline"
-                    size={18}
-                    color="#3b82f6"
-                    style={styles.inputIcon}
-                  />
-                  <TextInput
-                    style={[styles.input, styles.passwordInput]}
-                    placeholder="Enter your password"
-                    placeholderTextColor="#94a3b8"
-                    value={password}
-                    onChangeText={setPassword}
-                    onFocus={() => setFocusedInput('password')}
-                    onBlur={() => setFocusedInput('')}
-                    secureTextEntry={!showPassword}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                  <TouchableOpacity
-                    onPress={() => setShowPassword(!showPassword)}
-                    style={styles.eyeIcon}
-                  >
-                    <Ionicons
-                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                      size={18}
-                      color="#94a3b8"
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Forgot Password */}
-              <TouchableOpacity style={styles.forgotPassword}>
-                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-              </TouchableOpacity>
-
-              {/* Sign In Button */}
-              <TouchableOpacity 
-                activeOpacity={0.8}
-                onPress={handleSignIn}
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Logo Section */}
+            <View style={styles.logoContainer}>
+              <LinearGradient
+                colors={['#ec4899', '#ef4444']}
+                style={styles.logoGradient}
               >
-                <LinearGradient
-                  colors={['#2563eb', '#1d4ed8']}
-                  style={styles.signInButton}
-                >
-                  <Ionicons name="shield-checkmark" size={18} color="white" />
-                  <Text style={styles.signInButtonText}>Sign In Securely</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-
-              {/* Divider */}
-              <View style={styles.divider}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>OR</Text>
-                <View style={styles.dividerLine} />
-              </View>
-
-              {/* Biometric Login */}
-              <TouchableOpacity
-                style={styles.biometricButton}
-                activeOpacity={0.8}
-                onPress={handleBiometricLogin}
-              >
-                <Ionicons name="finger-print" size={20} color="#2563eb" />
-                <Text style={styles.biometricButtonText}>
-                  Use Biometric Login
-                </Text>
-              </TouchableOpacity>
-
-              {/* Sign Up Link */}
-              <View style={styles.signUpContainer}>
-                <Text style={styles.signUpText}>Don't have an account? </Text>
-                <TouchableOpacity>
-                  <Text style={styles.signUpLink}>Sign Up</Text>
-                </TouchableOpacity>
-              </View>
+                <Icon name="shield" size={36} color="white" />
+              </LinearGradient>
+              <Text style={styles.title}>ZeroTrust IoT</Text>
+              <Text style={styles.subtitle}>AI Security Platform</Text>
             </View>
-          </BlurView>
 
-          {/* Security Badge */}
-          <View style={styles.securityBadge}>
-            <Ionicons name="checkmark-circle" size={14} color="#4ade80" />
-            <Text style={styles.securityText}>256-bit Encrypted Connection</Text>
-          </View>
-        </ScrollView>
+            {/* Main Card with Blur */}
+            <BlurView intensity={80} tint="light" style={styles.card}>
+              <View style={styles.cardContent}>
+                {/* Header */}
+                <View style={styles.header}>
+                  <Text style={styles.welcomeText}>Welcome Back</Text>
+                  <Text style={styles.description}>
+                    Sign in with your USTP credentials
+                  </Text>
+                </View>
+
+                {/* Error Message */}
+                {error ? (
+                  <View style={styles.errorBox}>
+                    <Icon name="alert" size={14} color={colors.error.main} />
+                    <Text style={styles.errorText}>{error}</Text>
+                  </View>
+                ) : null}
+
+                {/* ID Number Input */}
+                <View style={styles.inputContainer}>
+                  <Text style={styles.label}>ID Number</Text>
+                  <View
+                    style={[
+                      styles.inputWrapper,
+                      focusedInput === 'username' && styles.inputWrapperFocused,
+                      error && styles.inputWrapperError,
+                    ]}
+                  >
+                    <Icon name="users" size={18} color="#3b82f6" />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Enter your ID number (e.g., 2023302988)"
+                      placeholderTextColor="#94a3b8"
+                      value={username}
+                      onChangeText={(text) => {
+                        setUsername(text);
+                        setError('');
+                      }}
+                      onFocus={() => setFocusedInput('username')}
+                      onBlur={() => setFocusedInput('')}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      editable={!isLoading}
+                      returnKeyType="next"
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+
+                {/* Password Input */}
+                <View style={styles.inputContainer}>
+                  <Text style={styles.label}>Password</Text>
+                  <View
+                    style={[
+                      styles.inputWrapper,
+                      focusedInput === 'password' && styles.inputWrapperFocused,
+                      error && styles.inputWrapperError,
+                    ]}
+                  >
+                    <Icon name="lock" size={18} color="#3b82f6" />
+                    <TextInput
+                      style={[styles.input, styles.passwordInput]}
+                      placeholder="Enter your password"
+                      placeholderTextColor="#94a3b8"
+                      value={password}
+                      onChangeText={(text) => {
+                        setPassword(text);
+                        setError('');
+                      }}
+                      onFocus={() => setFocusedInput('password')}
+                      onBlur={() => setFocusedInput('')}
+                      secureTextEntry={!showPassword}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      editable={!isLoading}
+                      returnKeyType="go"
+                      onSubmitEditing={handleLogin}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowPassword(!showPassword)}
+                      style={styles.eyeIcon}
+                      disabled={isLoading}
+                    >
+                      <Icon 
+                        name={showPassword ? 'eye' : 'lock'} 
+                        size={18} 
+                        color="#94a3b8" 
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Network Status Info */}
+                <View style={styles.networkInfo}>
+                  <View style={styles.networkDot} />
+                  <Text style={styles.networkText}>
+                    Connected to USTP Server
+                  </Text>
+                </View>
+
+                {/* Sign In Button */}
+                <TouchableOpacity 
+                  activeOpacity={0.8}
+                  onPress={handleLogin}
+                  disabled={isLoading || !username || !password}
+                >
+                  <LinearGradient
+                    colors={
+                      isLoading || !username || !password
+                        ? ['#cbd5e1', '#94a3b8']
+                        : ['#2563eb', '#1d4ed8']
+                    }
+                    style={styles.signInButton}
+                  >
+                    {isLoading ? (
+                      <>
+                        <ActivityIndicator color="white" size="small" />
+                        <Text style={styles.signInButtonText}>Authenticating...</Text>
+                      </>
+                    ) : (
+                      <>
+                        <Icon name="shield" size={18} color="white" />
+                        <Text style={styles.signInButtonText}>Sign In Securely</Text>
+                      </>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+
+                {/* API Info */}
+                <View style={styles.apiInfo}>
+                  <Text style={styles.apiInfoText}>
+                    🔐 Secure connection to citc-ustpcdo.com
+                  </Text>
+                </View>
+              </View>
+            </BlurView>
+
+            {/* Security Badge */}
+            <View style={styles.securityBadge}>
+              <Icon name="check" size={14} color="#4ade80" />
+              <Text style={styles.securityText}>256-bit Encrypted Connection</Text>
+            </View>
+
+            {/* Development Test Button */}
+            {__DEV__ && (
+              <View style={styles.devSection}>
+                <TouchableOpacity
+                  style={styles.testDevButton}
+                  onPress={() => {
+                    setUsername('2023302988');
+                    setPassword('');
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    Alert.alert(
+                      'Test Mode',
+                      'ID number filled. Enter your password to test the real API connection.\n\nOpen DevTools Network tab to see:\n• POST /auth/token/login/\n• GET /auth/users/me/'
+                    );
+                  }}
+                >
+                  <Text style={styles.testDevButtonText}>🔧 Fill Test ID Number</Text>
+                </TouchableOpacity>
+                
+                <Text style={styles.devNote}>
+                  ℹ️ Open Chrome DevTools (F12) → Network tab to see API requests
+                </Text>
+              </View>
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
       </LinearGradient>
     </View>
   );
@@ -227,6 +330,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#ec4899',
     bottom: '25%',
     right: '25%',
+  },
+  keyboardView: {
+    flex: 1,
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -282,6 +388,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#64748b',
   },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEE2E2',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#dc2626',
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#991b1b',
+    marginLeft: 8,
+    flex: 1,
+  },
   inputContainer: {
     marginBottom: 16,
   },
@@ -304,14 +426,16 @@ const styles = StyleSheet.create({
     borderColor: '#3b82f6',
     backgroundColor: 'white',
   },
-  inputIcon: {
-    marginRight: 8,
+  inputWrapperError: {
+    borderColor: '#dc2626',
+    backgroundColor: '#fff5f5',
   },
   input: {
     flex: 1,
     paddingVertical: 12,
     fontSize: 14,
     color: '#1e293b',
+    paddingHorizontal: 8,
   },
   passwordInput: {
     paddingRight: 40,
@@ -319,16 +443,24 @@ const styles = StyleSheet.create({
   eyeIcon: {
     position: 'absolute',
     right: 12,
-    padding: 4,
+    padding: 8,
   },
-  forgotPassword: {
-    alignSelf: 'flex-end',
+  networkInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 20,
+    paddingHorizontal: 4,
   },
-  forgotPasswordText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#2563eb',
+  networkDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#10b981',
+    marginRight: 8,
+  },
+  networkText: {
+    fontSize: 11,
+    color: '#64748b',
   },
   signInButton: {
     flexDirection: 'row',
@@ -348,52 +480,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 16,
+  apiInfo: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#e2e8f0',
-  },
-  dividerText: {
-    paddingHorizontal: 12,
-    fontSize: 12,
+  apiInfoText: {
+    fontSize: 11,
     color: '#64748b',
-    fontWeight: '500',
-  },
-  biometricButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f8fafc',
-    borderWidth: 2,
-    borderColor: '#60a5fa',
-    paddingVertical: 12,
-    borderRadius: 12,
-    marginBottom: 16,
-    gap: 8,
-  },
-  biometricButtonText: {
-    color: '#334155',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  signUpContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  signUpText: {
-    fontSize: 12,
-    color: '#475569',
-  },
-  signUpLink: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#2563eb',
+    textAlign: 'center',
   },
   securityBadge: {
     flexDirection: 'row',
@@ -406,5 +502,29 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#bfdbfe',
     fontWeight: '500',
+  },
+  devSection: {
+    marginTop: 16,
+    gap: 12,
+  },
+  testDevButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#2563eb',
+  },
+  testDevButtonText: {
+    fontSize: 12,
+    color: '#2563eb',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  devNote: {
+    fontSize: 11,
+    color: '#94a3b8',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });
